@@ -1,0 +1,108 @@
+Option Explicit
+
+Sub BoSql()
+
+Dim arr, brr
+Dim wb1 As Workbook
+Dim wb2 As Workbook
+Dim wb3 As Workbook
+Dim ws1 As Worksheet
+Dim ws2 As Worksheet
+Dim ws3 As Worksheet
+Dim sht As Worksheet
+Dim Conn, Rst As Object
+Dim cond1, cond2 As String
+Dim lr As Integer
+Dim j As Integer
+Set wb1 = Workbooks("vba BO with sql.xlsm")
+Set wb2 = Workbooks("BackOrderReport.xlsx")
+Set wb3 = Workbooks("BO sheet template (most recent).xlsx")
+
+
+
+'create the sql
+Set Conn = CreateObject("ADODB.Connection")
+Set Rst = CreateObject("ADODB.Recordset")
+Dim sConnstring1, sConnstring2 As String
+Dim Pathstr1, Pathstr2 As String
+Dim strSQL1, strSQL2 As String
+
+'Create the connection string
+
+
+'for part 1 connection string
+Pathstr1 = wb3.path & "\BO sheet template (most recent).xlsx"
+
+If Application.Version < 12 Then
+    sConnstring1 = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & Pathstr1 & ";Extended Properties=""Excel 8.0;HDR=Yes;"";"
+Else
+    sConnstring1 = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & Pathstr1 & ";Extended Properties=""Excel 8.0;HDR=Yes;"";"
+
+End If
+
+'for part 2 connection string
+Pathstr2 = wb2.path & "\BackOrderReport.xlsx"
+
+If Application.Version < 12 Then
+    sConnstring2 = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & Pathstr2 & ";Extended Properties=""Excel 8.0;HDR=Yes;"";"
+Else
+    sConnstring2 = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & Pathstr2 & ";Extended Properties=""Excel 8.0;HDR=Yes;"";"
+
+End If
+
+
+'fill empty column blanks in BO sheet template
+lr = wb3.Sheets(2).Range("c65536").End(xlUp).Row
+
+For j = 2 To lr
+    
+    If IsEmpty(wb3.Sheets(2).Range("B" & j)) = True Then
+       wb3.Sheets(2).Range("B" & j) = wb3.Sheets(2).Range("B" & j - 1)
+    End If
+
+Next
+
+
+For Each sht In wb1.Worksheets
+    
+    'for report part 1
+   cond1 = sht.Range("A2")
+   strSQL1 = "select [Category],[Product],[Quantity],[Alternatives],[Colour],[Price]" & _
+            "From[BO page$] " & _
+            "where [Company Name]='" & cond1 & "' AND [Category] <> 'Accessory'"
+
+   Conn.Open sConnstring1
+   Set Rst = Conn.Execute(strSQL1)
+   brr = sht.Range("F2:O2")
+   sht.Range("A7").CurrentRegion.Clear
+   sht.Range("A6").Resize(UBound(brr), UBound(brr, 2)) = brr
+   sht.Range("A6").EntireRow.Font.Bold = True
+   sht.Range("A6").EntireRow.Interior.Color = RGB(173, 216, 230)
+   sht.Range("A7").CopyFromRecordset Rst
+   Conn.Close
+   Set Rst = Nothing
+      
+
+    'for report part 2
+   cond2 = sht.Range("C2")
+   strSQL2 = "select [SRS ID],[Date Created],[Days of order],[Customer Reference],[Contact],[User Name],[Product],[Qty]" & _
+            "From[Backorder detail$] " & _
+            "where [Customer]='" & cond2 & "' AND [Category] <> 'Accessory'"
+
+   Conn.Open sConnstring2
+   Set Rst = Conn.Execute(strSQL2)
+   arr = sht.Range("F1:O1")
+   sht.Range("A20").CurrentRegion.Clear
+   sht.Range("A19").Resize(UBound(arr), UBound(arr, 2)) = arr
+   sht.Range("A19").EntireRow.Font.Bold = True
+   sht.Range("A19").EntireRow.Interior.Color = RGB(173, 216, 230)
+   sht.Range("A20").CopyFromRecordset Rst
+   Conn.Close
+     
+Next
+
+Set Conn = Nothing
+Set Rst = Nothing
+
+End Sub
+
